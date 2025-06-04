@@ -56,7 +56,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, uploadStat
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files?.[0];
     if (file) {
       processFile(file);
@@ -70,17 +70,46 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, uploadStat
     }
   };
 
+  const handleAnalyze = async () => {
+    if (!fileInputRef.current?.files?.[0]) return;
+
+    const formData = new FormData();
+    formData.append('image', fileInputRef.current.files[0]);
+
+    try {
+      uploadStatus.isProcessing = true;
+
+      const response = await fetch('http://localhost:5000/predict', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      uploadStatus.isProcessing = false;
+
+      if (result.status === 'success') {
+        alert(`Prediksi: ${result.prediction} (Confidence: ${(result.confidence * 100).toFixed(2)}%)`);
+      } else {
+        alert(`Gagal memproses gambar: ${result.message}`);
+      }
+    } catch (err: any) {
+      uploadStatus.isProcessing = false;
+      alert('Terjadi kesalahan saat mengirim gambar ke server.');
+      console.error(err);
+    }
+  };
+
   const handleClickUpload = () => {
     fileInputRef.current?.click();
   };
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      <div 
+      <div
         className={`
           relative border-2 border-dashed rounded-lg p-6 
-          ${isDragging 
-            ? 'border-green-500 bg-green-50 dark:bg-green-900/30' 
+          ${isDragging
+            ? 'border-green-500 bg-green-50 dark:bg-green-900/30'
             : 'border-green-300 dark:border-green-700 bg-white dark:bg-gray-800'} 
           transition-colors duration-200
           ${uploadStatus.isUploading || uploadStatus.isProcessing ? 'opacity-60 pointer-events-none' : ''}
@@ -101,13 +130,13 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, uploadStat
 
         {previewUrl ? (
           <div className="relative">
-            <img 
-              src={previewUrl} 
-              alt="Preview" 
-              className="max-h-80 mx-auto rounded-lg shadow-sm" 
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="max-h-80 mx-auto rounded-lg shadow-sm"
             />
             {!uploadStatus.isUploading && !uploadStatus.isProcessing && (
-              <button 
+              <button
                 onClick={handleRemoveImage}
                 className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
                 aria-label="Hapus gambar"
@@ -117,7 +146,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, uploadStat
             )}
           </div>
         ) : (
-          <div 
+          <div
             className="text-center cursor-pointer py-12"
             onClick={handleClickUpload}
           >
@@ -128,7 +157,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, uploadStat
             <p className="text-sm text-green-600 dark:text-green-400 mb-4">
               Tarik dan lepas atau klik untuk menelusuri
             </p>
-            <button 
+            <button
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors inline-flex items-center"
               type="button"
             >
@@ -146,7 +175,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, uploadStat
             {uploadStatus.error}
           </div>
         )}
-        
+
         {uploadStatus.isUploading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-lg">
             <div className="text-center">
@@ -155,7 +184,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, uploadStat
             </div>
           </div>
         )}
-        
+
         {uploadStatus.isProcessing && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-lg">
             <div className="text-center">
@@ -165,16 +194,19 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageSelect, uploadStat
           </div>
         )}
       </div>
-      
+
       {previewUrl && !uploadStatus.isUploading && !uploadStatus.isProcessing && (
         <div className="mt-4 text-center">
-          <button 
+          <button
             className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
             type="button"
+            onClick={handleAnalyze}
           >
             Analisis Gambar Daun
           </button>
+
         </div>
+        
       )}
     </div>
   );
